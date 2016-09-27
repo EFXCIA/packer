@@ -47,6 +47,11 @@ IMPROVEMENTS:
   * builder/parallels: Add support for ctrl, shift and alt keys in `boot_command`.
     [GH-3767]
   * builder/qemu: Added `vnc_bind_address` option [GH-3574]
+  * builder/qemu: Specify disk format when starting qemu [GH-3888]
+  * builder/qemu: Now pauses between `boot_command` entries when running with
+    `-debug` [GH-3547]
+  * builder/qemu: Add support for ctrl, shift and alt keys in `boot_command`.
+    [GH-3767]
   * builder/virtualbox: Now pauses between `boot_command` entries when running
     with `-debug` [GH-3542]
   * builder/virtualbox: Added `vrdp_bind_address` option [GH-3566]
@@ -60,8 +65,6 @@ IMPROVEMENTS:
     [GH-3347]
   * builder/vmware: Add support for ctrl, shift and alt keys in `boot_command`.
     [GH-3767]
-  * builder/qemu: Now pauses between `boot_command` entries when running with
-    `-debug` [GH-3547]
   * provisioner/ansible: Improved logging and error handling [GH-3477]
   * provisioner/ansible: Support scp [GH-3861]
   * provisioner/ansible-local: Support for ansible-galaxy [GH-3350] [GH-3836]
@@ -73,6 +76,8 @@ IMPROVEMENTS:
   * post-processor/docker: Preserve tags when running docker push [GH-3631]
   * post-processor/docker: Improved support for Docker push to Amazon ECR [GH-3856]
   * scripts: Added `help` target to Makefile [GH-3290]
+  * builder/googlecompute: Add `-force` option to delete old image before
+      creating new one. [GH-3918]
 
 BUG FIXES:
 
@@ -96,6 +101,13 @@ BUG FIXES:
   * provisioner/ansible: Properly set host key checking even when a custom ENV
     is specified [GH-3568]
   * website: improved rendering on iPad [GH-3780]
+  * provisioner/file: Fix directory download. [GH-3899]
+
+## 0.10.2 (September 20, 2016)
+
+BUG FIXES:
+
+  * Rebuilding with OS X Sierra and go 1.7.1 to fix bug  in Sierra
 
 ## 0.10.1 (May 7, 2016)
 
