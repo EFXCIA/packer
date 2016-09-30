@@ -33,6 +33,7 @@ IMPROVEMENTS:
   * builder/digitalocean: Use `state_timeout` for unlock and off transitions.
     [GH-3444]
   * builder/digitalocean: Fixes timeout waiting for snapshot [GH-3868]
+  * builder/digitalocean: Added `user_data_file` support. [GH-3933]
   * builder/docker: Improved support for Docker pull from Amazon ECR. [GH-3856]
   * builder/google: Added support for `image_family` [GH-3503]
   * builder/google: Use gcloud application default credentials. [GH-3655]
@@ -102,6 +103,8 @@ BUG FIXES:
     is specified [GH-3568]
   * website: improved rendering on iPad [GH-3780]
   * provisioner/file: Fix directory download. [GH-3899]
+  * command/push: Allows dot (`.`) in image names. [GH-3937]
+  * builder/amazon: add retry logic when creating tags.
 
 ## 0.10.2 (September 20, 2016)
 
