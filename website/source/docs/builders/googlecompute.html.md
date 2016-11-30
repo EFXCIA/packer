@@ -125,8 +125,14 @@ builder.
 -   `project_id` (string) - The project ID that will be used to launch instances
     and store images.
 
--   `source_image` (string) - The source image to use to create the new
-    image from. Example: `"debian-7-wheezy-v20150127"`
+-   `source_image` (string) - The source image to use to create the new image
+    from. You can also specify `source_image_family` instead. If both
+    `source_image` and `source_image_family` are specified, `source_image`
+    takes precedence. Example: `"debian-8-jessie-v20161027"`
+
+-   `source_image_family` (string) - The source image family to use to create
+    the new image from. The image family always returns its latest image that
+    is not deprecated. Example: `"debian-8"`.
 
 -   `zone` (string) - The zone in which to launch the instance used to create
     the image. Example: `"us-central1-a"`
@@ -147,7 +153,10 @@ builder.
 
 -   `image_description` (string) - The description of the resulting image.
 
--   `image_family` (string) - The name of the image family to which the resulting image belongs. You can create disks by specifying an image family instead of a specific image name. The image family always returns its latest image that is not deprecated.
+-   `image_family` (string) - The name of the image family to which the
+    resulting image belongs. You can create disks by specifying an image family
+    instead of a specific image name. The image family always returns its
+    latest image that is not deprecated.
 
 -   `image_name` (string) - The unique name of the resulting image. Defaults to
     `"packer-{{timestamp}}"`.
@@ -171,6 +180,18 @@ builder.
 -   `region` (string) - The region in which to launch the instance. Defaults to
     to the region hosting the specified `zone`.
 
+-   `scopes` (array of strings) - The service account scopes for launched instance.
+    Defaults to:
+
+``` {.json}
+[ "https://www.googleapis.com/auth/userinfo.email",
+  "https://www.googleapis.com/auth/compute",
+  "https://www.googleapis.com/auth/devstorage.full_control" ]
+```
+
+-   `source_image_project_id` (string) - The project ID of the
+    project containing the source image.
+
 -   `startup_script_file` (string) - The filepath to a startup script to run on 
     the VM from which the image will be made.
 
@@ -187,10 +208,10 @@ builder.
 
 -   `use_internal_ip` (boolean) - If true, use the instance's internal IP
     instead of its external IP during building.
-    
+
 ## Startup Scripts
 
-Startup scripts can be a powerful tool for configuring the instance from which the image is made. 
+Startup scripts can be a powerful tool for configuring the instance from which the image is made.
 The builder will wait for a startup script to terminate. A startup script can be provided via the
 `startup_script_file` or 'startup-script' instance creation `metadata` field. Therefore, the build
 time will vary depending on the duration of the startup script. If `startup_script_file` is set,

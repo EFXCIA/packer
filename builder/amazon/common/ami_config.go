@@ -19,6 +19,8 @@ type AMIConfig struct {
 	AMITags                 map[string]string `mapstructure:"tags"`
 	AMIEnhancedNetworking   bool              `mapstructure:"enhanced_networking"`
 	AMIForceDeregister      bool              `mapstructure:"force_deregister"`
+	AMIEncryptBootVolume    bool              `mapstructure:"encrypt_boot"`
+	SnapshotTags            map[string]string `mapstructure:"snapshot_tags"`
 }
 
 func (c *AMIConfig) Prepare(ctx *interpolate.Context) []error {
@@ -52,6 +54,10 @@ func (c *AMIConfig) Prepare(ctx *interpolate.Context) []error {
 		}
 
 		c.AMIRegions = regions
+	}
+
+	if len(c.AMIUsers) > 0 && c.AMIEncryptBootVolume {
+		errs = append(errs, fmt.Errorf("Cannot share AMI with encrypted boot volume"))
 	}
 
 	if len(errs) > 0 {

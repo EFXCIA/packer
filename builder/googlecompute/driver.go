@@ -1,5 +1,10 @@
 package googlecompute
 
+import (
+	"crypto/rsa"
+	"time"
+)
+
 // Driver is the interface that has to be implemented to communicate
 // with GCE. The Driver interface exists mostly to allow a mock implementation
 // to be used to test the steps.
@@ -17,11 +22,14 @@ type Driver interface {
 	// DeleteDisk deletes the disk with the given name.
 	DeleteDisk(zone, name string) (<-chan error, error)
 
-	// GetImage gets an image; tries the default and public projects.
-	GetImage(name string) (*Image, error)
+	// GetImage gets an image; tries the default and public projects. If
+	// fromFamily is true, name designates an image family instead of a
+	// particular image.
+	GetImage(name string, fromFamily bool) (*Image, error)
 
-	// GetImageFromProject gets an image from a specific project.
-	GetImageFromProject(project, name string) (*Image, error)
+	// GetImageFromProject gets an image from a specific project. If fromFamily
+	// is true, name designates an image family instead of a particular image.
+	GetImageFromProject(project, name string, fromFamily bool) (*Image, error)
 
 	// GetInstanceMetadata gets a metadata variable for the instance, name.
 	GetInstanceMetadata(zone, name, key string) (string, error)
@@ -44,6 +52,9 @@ type Driver interface {
 
 	// WaitForInstance waits for an instance to reach the given state.
 	WaitForInstance(state, zone, name string) <-chan error
+
+	// CreateOrResetWindowsPassword creates or resets the password for a user on an Windows instance.
+	CreateOrResetWindowsPassword(zone, name string, config *WindowsPasswordConfig) (<-chan error, error)
 }
 
 type InstanceConfig struct {
@@ -59,8 +70,30 @@ type InstanceConfig struct {
 	OmitExternalIP      bool
 	Preemptible         bool
 	Region              string
+	Scopes              []string
 	ServiceAccountEmail string
 	Subnetwork          string
 	Tags                []string
 	Zone                string
+}
+
+// WindowsPasswordConfig is the data structue that GCE needs to encrypt the created
+// windows password.
+type WindowsPasswordConfig struct {
+	key      *rsa.PrivateKey
+	password string
+	UserName string    `json:"userName"`
+	Modulus  string    `json:"modulus"`
+	Exponent string    `json:"exponent"`
+	Email    string    `json:"email"`
+	ExpireOn time.Time `json:"expireOn"`
+}
+
+type windowsPasswordResponse struct {
+	UserName          string `json:"userName"`
+	PasswordFound     bool   `json:"passwordFound"`
+	EncryptedPassword string `json:"encryptedPassword"`
+	Modulus           string `json:"modulus"`
+	Exponent          string `json:"exponent"`
+	ErrorMessage      string `json:"errorMessage"`
 }

@@ -55,6 +55,15 @@ func TestBuilderAcc_amiSharing(t *testing.T) {
 	})
 }
 
+func TestBuilderAcc_encryptedBoot(t *testing.T) {
+	builderT.Test(t, builderT.TestCase{
+		PreCheck: func() { testAccPreCheck(t) },
+		Builder:  &Builder{},
+		Template: testBuilderAccEncrypted,
+		Check:    checkBootEncrypted(),
+	})
+}
+
 func checkAMISharing(count int, uid, group string) builderT.TestCheckFunc {
 	return func(artifacts []packer.Artifact) error {
 		if len(artifacts) > 1 {
@@ -129,7 +138,7 @@ func checkRegionCopy(regions []string) builderT.TestCheckFunc {
 		for _, r := range regions {
 			regionSet[r] = struct{}{}
 		}
-		for r, _ := range artifact.Amis {
+		for r := range artifact.Amis {
 			if _, ok := regionSet[r]; !ok {
 				return fmt.Errorf("unknown region: %s", r)
 			}
@@ -138,6 +147,42 @@ func checkRegionCopy(regions []string) builderT.TestCheckFunc {
 		}
 		if len(regionSet) > 0 {
 			return fmt.Errorf("didn't copy to: %#v", regionSet)
+		}
+
+		return nil
+	}
+}
+
+func checkBootEncrypted() builderT.TestCheckFunc {
+	return func(artifacts []packer.Artifact) error {
+
+		// Get the actual *Artifact pointer so we can access the AMIs directly
+		artifactRaw := artifacts[0]
+		artifact, ok := artifactRaw.(*common.Artifact)
+		if !ok {
+			return fmt.Errorf("unknown artifact: %#v", artifactRaw)
+		}
+
+		// describe the image, get block devices with a snapshot
+		ec2conn, _ := testEC2Conn()
+		imageResp, err := ec2conn.DescribeImages(&ec2.DescribeImagesInput{
+			ImageIds: []*string{aws.String(artifact.Amis["us-east-1"])},
+		})
+
+		if err != nil {
+			return fmt.Errorf("Error retrieving Image Attributes for AMI (%s) in AMI Encrypted Boot Test: %s", artifact, err)
+		}
+
+		image := imageResp.Images[0] // Only requested a single AMI ID
+
+		rootDeviceName := image.RootDeviceName
+
+		for _, bd := range image.BlockDeviceMappings {
+			if *bd.DeviceName == *rootDeviceName {
+				if *bd.Ebs.Encrypted != true {
+					return fmt.Errorf("volume not encrypted: %s", *bd.Ebs.SnapshotId)
+				}
+			}
 		}
 
 		return nil
@@ -161,7 +206,10 @@ func testEC2Conn() (*ec2.EC2, error) {
 		return nil, err
 	}
 
-	session := session.New(config)
+	session, err := session.NewSession(config)
+	if err != nil {
+		return nil, err
+	}
 	return ec2.New(session), nil
 }
 
@@ -218,6 +266,20 @@ const testBuilderAccSharing = `
 		"ami_name": "packer-test {{timestamp}}",
 		"ami_users":["932021504756"],
 		"ami_groups":["all"]
+	}]
+}
+`
+
+const testBuilderAccEncrypted = `
+{
+	"builders": [{
+		"type": "test",
+		"region": "us-east-1",
+		"instance_type": "m3.medium",
+		"source_ami":"ami-c15bebaa",
+		"ssh_username": "ubuntu",
+		"ami_name": "packer-enc-test {{timestamp}}",
+		"encrypt_boot": true 
 	}]
 }
 `

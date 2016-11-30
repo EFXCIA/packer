@@ -70,7 +70,10 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 		return nil, err
 	}
 
-	session := session.New(config)
+	session, err := session.NewSession(config)
+	if err != nil {
+		return nil, err
+	}
 	ec2conn := ec2.New(session)
 
 	// If the subnet is specified but not the AZ, try to determine the AZ automatically
@@ -100,6 +103,7 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 		&awscommon.StepSourceAMIInfo{
 			SourceAmi:          b.config.SourceAmi,
 			EnhancedNetworking: b.config.AMIEnhancedNetworking,
+			AmiFilters:         b.config.SourceAmiFilter,
 		},
 		&awscommon.StepKeyPair{
 			Debug:                b.config.PackerDebug,
@@ -148,20 +152,24 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 				ec2conn,
 				b.config.SSHPrivateIp),
 			SSHConfig: awscommon.SSHConfig(
-				b.config.RunConfig.Comm.SSHUsername),
+				b.config.RunConfig.Comm.SSHAgentAuth,
+				b.config.RunConfig.Comm.SSHUsername,
+				b.config.RunConfig.Comm.SSHPassword),
 		},
 		&common.StepProvision{},
-		&stepStopInstance{
+		&awscommon.StepStopEBSBackedInstance{
 			SpotPrice:           b.config.SpotPrice,
 			DisableStopInstance: b.config.DisableStopInstance,
 		},
-		// TODO(mitchellh): verify works with spots
-		&stepModifyInstance{},
+		&awscommon.StepModifyEBSBackedInstance{
+			EnableEnhancedNetworking: b.config.AMIEnhancedNetworking,
+		},
 		&awscommon.StepDeregisterAMI{
 			ForceDeregister: b.config.AMIForceDeregister,
 			AMIName:         b.config.AMIName,
 		},
 		&stepCreateAMI{},
+		&stepCreateEncryptedAMICopy{},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig: &b.config.AccessConfig,
 			Regions:      b.config.AMIRegions,
@@ -174,7 +182,8 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 			ProductCodes: b.config.AMIProductCodes,
 		},
 		&awscommon.StepCreateTags{
-			Tags: b.config.AMITags,
+			Tags:         b.config.AMITags,
+			SnapshotTags: b.config.SnapshotTags,
 		},
 	}
 
