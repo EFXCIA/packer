@@ -1,7 +1,3 @@
-// Copyright (c) Microsoft Open Technologies, Inc.
-// All Rights Reserved.
-// Licensed under the Apache License, Version 2.0.
-// See License.txt in the project root for license information.
 package common
 
 import (
@@ -14,17 +10,17 @@ import (
 type StepMountGuestAdditions struct {
 	GuestAdditionsMode string
 	GuestAdditionsPath string
-	Generation    uint
+	Generation         uint
 }
 
 func (s *StepMountGuestAdditions) Run(state multistep.StateBag) multistep.StepAction {
 	ui := state.Get("ui").(packer.Ui)
-	
+
 	if s.GuestAdditionsMode != "attach" {
 		ui.Say("Skipping mounting Integration Services Setup Disk...")
 		return multistep.ActionContinue
-	}	
-	
+	}
+
 	driver := state.Get("driver").(Driver)
 	ui.Say("Mounting Integration Services Setup Disk...")
 
@@ -59,7 +55,7 @@ func (s *StepMountGuestAdditions) Run(state multistep.StateBag) multistep.StepAc
 	}
 
 	log.Println(fmt.Sprintf("ISO %s mounted on DVD controller %v, location %v", s.GuestAdditionsPath, controllerNumber, controllerLocation))
-	
+
 	return multistep.ActionContinue
 }
 
@@ -67,21 +63,21 @@ func (s *StepMountGuestAdditions) Cleanup(state multistep.StateBag) {
 	if s.GuestAdditionsMode != "attach" {
 		return
 	}
-	
+
 	dvdControllerState := state.Get("guest.dvd.properties")
-	
+
 	if dvdControllerState == nil {
 		return
 	}
-	
-	dvdController := dvdControllerState.(DvdControllerProperties)	
+
+	dvdController := dvdControllerState.(DvdControllerProperties)
 	ui := state.Get("ui").(packer.Ui)
-	driver := state.Get("driver").(Driver)	
+	driver := state.Get("driver").(Driver)
 	vmName := state.Get("vmName").(string)
 	errorMsg := "Error unmounting Integration Services dvd drive: %s"
-	
+
 	ui.Say("Cleanup Integration Services dvd drive...")
-	
+
 	if dvdController.Existing {
 		err := driver.UnmountDvdDrive(vmName, dvdController.ControllerNumber, dvdController.ControllerLocation)
 		if err != nil {

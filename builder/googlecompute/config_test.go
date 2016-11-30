@@ -128,6 +128,21 @@ func TestConfigPrepare(t *testing.T) {
 			"foo bar",
 			true,
 		},
+		{
+			"scopes",
+			[]string{},
+			false,
+		},
+		{
+			"scopes",
+			[]string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/compute", "https://www.googleapis.com/auth/devstorage.full_control", "https://www.googleapis.com/auth/sqlservice.admin"},
+			false,
+		},
+		{
+			"scopes",
+			[]string{"https://www.googleapis.com/auth/cloud-platform"},
+			false,
+		},
 	}
 
 	for _, tc := range cases {
@@ -202,6 +217,7 @@ func testConfig(t *testing.T) map[string]interface{} {
 		"account_file": testAccountFile(t),
 		"project_id":   "hashicorp",
 		"source_image": "foo",
+		"ssh_username": "root",
 		"image_family": "bar",
 		"zone":         "us-east1-a",
 	}

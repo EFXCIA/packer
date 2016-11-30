@@ -1,7 +1,3 @@
-// Copyright (c) Microsoft Open Technologies, Inc.
-// All Rights Reserved.
-// Licensed under the Apache License, Version 2.0.
-// See License.txt in the project root for license information.
 package common
 
 import (
@@ -24,7 +20,7 @@ func (s *StepUnmountFloppyDrive) Run(state multistep.StateBag) multistep.StepAct
 
 	vmName := state.Get("vmName").(string)
 	ui.Say("Unmount/delete floppy drive (Run)...")
-	
+
 	errorMsg := "Error Unmounting floppy drive: %s"
 
 	err := driver.UnmountFloppyDrive(vmName)

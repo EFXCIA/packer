@@ -1,7 +1,3 @@
-// Copyright (c) Microsoft Open Technologies, Inc.
-// All Rights Reserved.
-// Licensed under the Apache License, Version 2.0.
-// See License.txt in the project root for license information.
 package common
 
 import (
@@ -19,13 +15,13 @@ func (s *StepUnmountSecondaryDvdImages) Run(state multistep.StateBag) multistep.
 	vmName := state.Get("vmName").(string)
 
 	ui.Say("Unmount/delete secondary dvd drives...")
-	
+
 	dvdControllersState := state.Get("secondary.dvd.properties")
-	
+
 	if dvdControllersState == nil {
 		return multistep.ActionContinue
 	}
-	
+
 	dvdControllers := dvdControllersState.([]DvdControllerProperties)
 
 	for _, dvdController := range dvdControllers {
@@ -47,9 +43,9 @@ func (s *StepUnmountSecondaryDvdImages) Run(state multistep.StateBag) multistep.
 				ui.Error(err.Error())
 				return multistep.ActionHalt
 			}
-		}		
+		}
 	}
-	
+
 	state.Put("secondary.dvd.properties", nil)
 
 	return multistep.ActionContinue

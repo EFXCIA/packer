@@ -18,17 +18,7 @@ type bootCommandTemplateData struct {
 	Name     string
 }
 
-// This step "types" the boot command into the VM via the prltype script, built on the
-// Parallels Virtualization SDK - Python API.
-//
-// Uses:
-//   driver Driver
-//   http_port int
-//   ui     packer.Ui
-//   vmName string
-//
-// Produces:
-//   <nothing>
+// This step "types" the boot command into the VM via the Hyper-V virtual keyboard
 type StepTypeBootCommand struct {
 	BootCommand []string
 	SwitchName  string
@@ -91,8 +81,8 @@ func (*StepTypeBootCommand) Cleanup(multistep.StateBag) {}
 func scancodes(message string) []string {
 	// Scancodes reference: http://www.win.tue.nl/~aeb/linux/kbd/scancodes-1.html
 	//
-	// Scancodes represent raw keyboard output and are fed to the VM by the
-	// VBoxManage controlvm keyboardputscancode program.
+	// Scancodes represent raw keyboard output and are fed to the VM by using
+	// powershell to use Msvm_Keyboard
 	//
 	// Scancodes are recorded here in pairs. The first entry represents
 	// the key press and the second entry represents the key release and is

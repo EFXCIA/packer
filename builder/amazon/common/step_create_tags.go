@@ -4,9 +4,11 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/mitchellh/multistep"
+	retry "github.com/mitchellh/packer/common"
 	"github.com/mitchellh/packer/packer"
 )
 
@@ -38,7 +40,13 @@ func (s *StepCreateTags) Run(state multistep.StateBag) multistep.StepAction {
 				Credentials: ec2conn.Config.Credentials,
 				Region:      aws.String(region),
 			}
-			session := session.New(&awsConfig)
+			session, err := session.NewSession(&awsConfig)
+			if err != nil {
+				err := fmt.Errorf("Error creating AWS session: %s", err)
+				state.Put("error", err)
+				ui.Error(err.Error())
+				return multistep.ActionHalt
+			}
 
 			regionconn := ec2.New(session)
 
@@ -71,9 +79,22 @@ func (s *StepCreateTags) Run(state multistep.StateBag) multistep.StepAction {
 				}
 			}
 
-			_, err = regionconn.CreateTags(&ec2.CreateTagsInput{
-				Resources: resourceIds,
-				Tags:      ec2Tags,
+			// Retry creating tags for about 2.5 minutes
+			err = retry.Retry(0.2, 30, 11, func() (bool, error) {
+				_, err := regionconn.CreateTags(&ec2.CreateTagsInput{
+					Resources: resourceIds,
+					Tags:      ec2Tags,
+				})
+				if err == nil {
+					return true, nil
+				}
+				if awsErr, ok := err.(awserr.Error); ok {
+					if awsErr.Code() == "InvalidAMIID.NotFound" ||
+						awsErr.Code() == "InvalidSnapshot.NotFound" {
+						return false, nil
+					}
+				}
+				return true, err
 			})
 
 			if err != nil {

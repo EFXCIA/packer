@@ -24,14 +24,18 @@ func (c *Config) createInstanceMetadata(sourceImage *Image, sshPublicKey string)
 		instanceMetadata[k] = v
 	}
 
-	// Merge any existing ssh keys with our public key.
-	sshMetaKey := "sshKeys"
-	sshKeys := fmt.Sprintf("%s:%s", c.Comm.SSHUsername, sshPublicKey)
-	if confSshKeys, exists := instanceMetadata[sshMetaKey]; exists {
-		sshKeys = fmt.Sprintf("%s\n%s", sshKeys, confSshKeys)
+	// Merge any existing ssh keys with our public key, unless there is no
+	// supplied public key. This is possible if a private_key_file was
+	// specified.
+	if sshPublicKey != "" {
+		sshMetaKey := "sshKeys"
+		sshKeys := fmt.Sprintf("%s:%s", c.Comm.SSHUsername, sshPublicKey)
+		if confSshKeys, exists := instanceMetadata[sshMetaKey]; exists {
+			sshKeys = fmt.Sprintf("%s\n%s", sshKeys, confSshKeys)
+		}
+		instanceMetadata[sshMetaKey] = sshKeys
 	}
-	instanceMetadata[sshMetaKey] = sshKeys
-	
+
 	// Wrap any startup script with our own startup script.
 	if c.StartupScriptFile != "" {
 		var content []byte
@@ -76,6 +80,10 @@ func (s *StepCreateInstance) Run(state multistep.StateBag) multistep.StepAction 
 		return multistep.ActionHalt
 	}
 
+	if sourceImage.IsWindows() && c.Comm.Type == "winrm" && c.Comm.WinRMPassword == "" {
+		state.Put("create_windows_password", true)
+	}
+
 	ui.Say("Creating instance...")
 	name := c.InstanceName
 
@@ -96,6 +104,7 @@ func (s *StepCreateInstance) Run(state multistep.StateBag) multistep.StepAction 
 		Preemptible:         c.Preemptible,
 		Region:              c.Region,
 		ServiceAccountEmail: c.Account.ClientEmail,
+		Scopes:              c.Scopes,
 		Subnetwork:          c.Subnetwork,
 		Tags:                c.Tags,
 		Zone:                c.Zone,

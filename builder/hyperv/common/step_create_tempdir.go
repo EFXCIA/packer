@@ -1,7 +1,3 @@
-// Copyright (c) Microsoft Open Technologies, Inc.
-// All Rights Reserved.
-// Licensed under the Apache License, Version 2.0.
-// See License.txt in the project root for license information.
 package common
 
 import (
@@ -30,10 +26,10 @@ func (s *StepCreateTempDir) Run(state multistep.StateBag) multistep.StepAction {
 		return multistep.ActionHalt
 	}
 
-	s.dirPath = packerTempDir;
+	s.dirPath = packerTempDir
 	state.Put("packerTempDir", packerTempDir)
 
-//	ui.Say("packerTempDir = '" + packerTempDir + "'")
+	//	ui.Say("packerTempDir = '" + packerTempDir + "'")
 
 	return multistep.ActionContinue
 }

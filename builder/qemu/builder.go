@@ -21,10 +21,10 @@ import (
 const BuilderId = "transcend.qemu"
 
 var accels = map[string]struct{}{
-	"none": struct{}{},
-	"kvm":  struct{}{},
-	"tcg":  struct{}{},
-	"xen":  struct{}{},
+	"none": {},
+	"kvm":  {},
+	"tcg":  {},
+	"xen":  {},
 }
 
 var netDevice = map[string]bool{
@@ -93,7 +93,6 @@ type Config struct {
 	DiskDiscard     string     `mapstructure:"disk_discard"`
 	SkipCompaction  bool       `mapstructure:"skip_compaction"`
 	DiskCompression bool       `mapstructure:"disk_compression"`
-	FloppyFiles     []string   `mapstructure:"floppy_files"`
 	Format          string     `mapstructure:"format"`
 	Headless        bool       `mapstructure:"headless"`
 	DiskImage       bool       `mapstructure:"disk_image"`
@@ -365,7 +364,8 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 
 	steps = append(steps, new(stepPrepareOutputDir),
 		&common.StepCreateFloppy{
-			Files: b.config.FloppyFiles,
+			Files:       b.config.FloppyConfig.FloppyFiles,
+			Directories: b.config.FloppyConfig.FloppyDirectories,
 		},
 		new(stepCreateDisk),
 		new(stepCopyDisk),

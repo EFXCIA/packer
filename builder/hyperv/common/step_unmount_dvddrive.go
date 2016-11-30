@@ -1,7 +1,3 @@
-// Copyright (c) Microsoft Open Technologies, Inc.
-// All Rights Reserved.
-// Licensed under the Apache License, Version 2.0.
-// See License.txt in the project root for license information.
 package common
 
 import (
@@ -19,15 +15,15 @@ func (s *StepUnmountDvdDrive) Run(state multistep.StateBag) multistep.StepAction
 	ui := state.Get("ui").(packer.Ui)
 
 	ui.Say("Unmount/delete os dvd drive...")
-		
+
 	dvdControllerState := state.Get("os.dvd.properties")
-	
+
 	if dvdControllerState == nil {
 		return multistep.ActionContinue
 	}
-	
-	dvdController := dvdControllerState.(DvdControllerProperties)		
-	
+
+	dvdController := dvdControllerState.(DvdControllerProperties)
+
 	if dvdController.Existing {
 		ui.Say(fmt.Sprintf("Unmounting os dvd drives controller %d location %d ...", dvdController.ControllerNumber, dvdController.ControllerLocation))
 		err := driver.UnmountDvdDrive(vmName, dvdController.ControllerNumber, dvdController.ControllerLocation)
@@ -47,9 +43,9 @@ func (s *StepUnmountDvdDrive) Run(state multistep.StateBag) multistep.StepAction
 			return multistep.ActionHalt
 		}
 	}
-	
+
 	state.Put("os.dvd.properties", nil)
-	
+
 	return multistep.ActionContinue
 }
 

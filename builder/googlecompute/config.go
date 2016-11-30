@@ -41,6 +41,7 @@ type Config struct {
 	Preemptible          bool              `mapstructure:"preemptible"`
 	RawStateTimeout      string            `mapstructure:"state_timeout"`
 	Region               string            `mapstructure:"region"`
+	Scopes               []string          `mapstructure:"scopes"`
 	SourceImage          string            `mapstructure:"source_image"`
 	SourceImageProjectId string            `mapstructure:"source_image_project_id"`
 	StartupScriptFile    string            `mapstructure:"startup_script_file"`
@@ -129,10 +130,6 @@ func NewConfig(raws ...interface{}) (*Config, []string, error) {
 		c.RawStateTimeout = "5m"
 	}
 
-	if c.Comm.SSHUsername == "" {
-		c.Comm.SSHUsername = "root"
-	}
-
 	if es := c.Comm.Prepare(&c.ctx); len(es) > 0 {
 		errs = packer.MultiErrorAppend(errs, es...)
 	}
@@ -141,6 +138,14 @@ func NewConfig(raws ...interface{}) (*Config, []string, error) {
 	if c.ProjectId == "" {
 		errs = packer.MultiErrorAppend(
 			errs, errors.New("a project_id must be specified"))
+	}
+
+	if c.Scopes == nil {
+		c.Scopes = []string{
+			"https://www.googleapis.com/auth/userinfo.email",
+			"https://www.googleapis.com/auth/compute",
+			"https://www.googleapis.com/auth/devstorage.full_control",
+		}
 	}
 
 	if c.SourceImage == "" {

@@ -97,8 +97,8 @@ each category, the available configuration keys are alphabetized.
     you are building. This option is required to register HVM images. Can be
     "paravirtual" (default) or "hvm".
 
--   `chroot_mounts` (array of array of strings) - This is a list of additional
-    devices to mount into the chroot environment. This configuration parameter
+-   `chroot_mounts` (array of array of strings) - This is a list of devices
+    to mount into the chroot environment. This configuration parameter
     requires some additional documentation which is in the "Chroot Mounts"
     section below. Please read that section for more information on how to
     use this.
@@ -107,11 +107,11 @@ each category, the available configuration keys are alphabetized.
     `{{.Command}}`. This may be useful to set if you want to set environmental
     variables or perhaps run it with `sudo` or so on. This is a configuration
     template where the `.Command` variable is replaced with the command to
-    be run.
+    be run. Defaults to "{{.Command}}".
 
 -   `copy_files` (array of strings) - Paths to files on the running EC2 instance
-    that will be copied into the chroot environment prior to provisioning. This
-    is useful, for example, to copy `/etc/resolv.conf` so that DNS lookups work.
+    that will be copied into the chroot environment prior to provisioning. Defaults
+    to `/etc/resolv.conf` so that DNS lookups work.
 
 -   `device_path` (string) - The path to the device where the root volume of the
     source AMI will be attached. This defaults to "" (empty string), which
@@ -139,7 +139,7 @@ each category, the available configuration keys are alphabetized.
 
 -   `mount_path` (string) - The path where the volume will be mounted. This is
     where the chroot environment will be. This defaults to
-    `packer-amazon-chroot-volumes/{{.Device}}`. This is a configuration template
+    `/mnt/packer-amazon-chroot-volumes/{{.Device}}`. This is a configuration template
     where the `.Device` variable is replaced with the name of the device where
     the volume is attached.
 
@@ -164,11 +164,41 @@ each category, the available configuration keys are alphabetized.
     mount and copy steps. The device and mount path are provided by
     `{{.Device}}` and `{{.MountPath}}`.
 
--   `root_volume_size` (integer) - The size of the root volume for the chroot
-    environment, and the resulting AMI
+-   `root_volume_size` (integer) - The size of the root volume in GB for the
+    chroot environment and the resulting AMI. Default size is the snapshot size
+    of the `source_ami` unless `from_scratch` is `true`, in which case
+    this field must be defined.
 
 -   `skip_region_validation` (boolean) - Set to true if you want to skip
     validation of the `ami_regions` configuration option. Defaults to false.
+
+-   `source_ami_filter` (object) - Filters used to populate the `source_ami` field.
+    Example:
+    ``` {.javascript}
+    "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "*ubuntu-xenial-16.04-amd64-server-*",
+          "root-device-type": "ebs"
+        },
+        "owners": ["099720109477"],
+        "most_recent": true
+    }
+    ```
+    This selects the most recent Ubuntu 16.04 HVM EBS AMI from Canonical.
+    NOTE: This will fail unless *exactly* one AMI is returned. In the above
+    example, `most_recent` will cause this to succeed by selecting the newest image.
+
+    -   `filters` (map of strings) - filters used to select a `source_ami`.
+         NOTE: This will fail unless *exactly* one AMI is returned.
+         Any filter described in the docs for [DescribeImages](http://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_DescribeImages.html)
+         is valid.
+
+    -   `owners` (array of strings) - This scopes the AMIs to certain Amazon account IDs.
+         This is helpful to limit the AMIs to a trusted third party, or to your own account.
+
+    -   `most_recent` (bool) - Selects the newest created image when true.
+         This is most useful for selecting a daily distro build.
 
 -   `tags` (object of key/value strings) - Tags applied to the AMI.
 
@@ -188,7 +218,7 @@ Here is a basic example. It is completely valid except for the access keys:
 
 ## Chroot Mounts
 
-The `chroot_mounts` configuration can be used to mount additional devices within
+The `chroot_mounts` configuration can be used to mount specific devices within
 the chroot. By default, the following additional mounts are added into the
 chroot by Packer:
 
@@ -200,7 +230,8 @@ chroot by Packer:
 
 These default mounts are usually good enough for anyone and are sane defaults.
 However, if you want to change or add the mount points, you may using the
-`chroot_mounts` configuration. Here is an example configuration:
+`chroot_mounts` configuration. Here is an example configuration which only
+mounts `/prod` and `/dev`:
 
 ``` {.javascript}
 {

@@ -1,7 +1,3 @@
-// Copyright (c) Microsoft Open Technologies, Inc.
-// All Rights Reserved.
-// Licensed under the Apache License, Version 2.0.
-// See License.txt in the project root for license information.
 package common
 
 import (
@@ -28,9 +24,9 @@ func (s *StepMountFloppydrive) Run(state multistep.StateBag) multistep.StepActio
 	if s.Generation > 1 {
 		return multistep.ActionContinue
 	}
-	
+
 	driver := state.Get("driver").(Driver)
-	
+
 	// Determine if we even have a floppy disk to attach
 	var floppyPath string
 	if floppyPathRaw, ok := state.GetOk("floppy_path"); ok {
@@ -69,7 +65,7 @@ func (s *StepMountFloppydrive) Run(state multistep.StateBag) multistep.StepActio
 func (s *StepMountFloppydrive) Cleanup(state multistep.StateBag) {
 	if s.Generation > 1 {
 		return
-	}	
+	}
 	driver := state.Get("driver").(Driver)
 	if s.floppyPath == "" {
 		return
