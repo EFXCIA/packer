@@ -13,6 +13,7 @@ import (
 
 	"github.com/mitchellh/multistep"
 	"github.com/mitchellh/packer/packer"
+	"github.com/mitchellh/packer/template/interpolate"
 )
 
 type StepRunSourceInstance struct {
@@ -22,8 +23,9 @@ type StepRunSourceInstance struct {
 	Debug                             bool
 	EbsOptimized                      bool
 	ExpectedRootDevice                string
-	InstanceType                      string
 	IamInstanceProfile                string
+	InstanceInitiatedShutdownBehavior string
+	InstanceType                      string
 	SourceAMI                         string
 	SpotPrice                         string
 	SpotPriceProduct                  string
@@ -31,7 +33,7 @@ type StepRunSourceInstance struct {
 	Tags                              map[string]string
 	UserData                          string
 	UserDataFile                      string
-	InstanceInitiatedShutdownBehavior string
+	Ctx                               interpolate.Context
 
 	instanceId  string
 	spotRequest *ec2.SpotInstanceRequest
@@ -39,28 +41,12 @@ type StepRunSourceInstance struct {
 
 func (s *StepRunSourceInstance) Run(state multistep.StateBag) multistep.StepAction {
 	ec2conn := state.Get("ec2").(*ec2.EC2)
-	keyName := state.Get("keyPair").(string)
-	tempSecurityGroupIds := state.Get("securityGroupIds").([]string)
-	ui := state.Get("ui").(packer.Ui)
-
-	securityGroupIds := make([]*string, len(tempSecurityGroupIds))
-	for i, sg := range tempSecurityGroupIds {
-		log.Printf("[DEBUG] Waiting for tempSecurityGroup: %s", sg)
-		err := WaitUntilSecurityGroupExists(ec2conn,
-			&ec2.DescribeSecurityGroupsInput{
-				GroupIds: []*string{aws.String(sg)},
-			},
-		)
-		if err == nil {
-			log.Printf("[DEBUG] Found security group %s", sg)
-			securityGroupIds[i] = aws.String(sg)
-		} else {
-			err := fmt.Errorf("Timed out waiting for security group %s", sg)
-			log.Printf("[DEBUG] %s", err.Error())
-			state.Put("error", err)
-			return multistep.ActionHalt
-		}
+	var keyName string
+	if name, ok := state.GetOk("keyPair"); ok {
+		keyName = name.(string)
 	}
+	securityGroupIds := aws.StringSlice(state.Get("securityGroupIds").([]string))
+	ui := state.Get("ui").(packer.Ui)
 
 	userData := s.UserData
 	if s.UserDataFile != "" {
@@ -290,10 +276,17 @@ func (s *StepRunSourceInstance) Run(state multistep.StateBag) multistep.StepActi
 
 	instance := latestInstance.(*ec2.Instance)
 
-	ec2Tags := make([]*ec2.Tag, 1, len(s.Tags)+1)
-	ec2Tags[0] = &ec2.Tag{Key: aws.String("Name"), Value: aws.String("Packer Builder")}
-	for k, v := range s.Tags {
-		ec2Tags = append(ec2Tags, &ec2.Tag{Key: aws.String(k), Value: aws.String(v)})
+	ui.Say("Adding tags to source instance")
+	if _, exists := s.Tags["Name"]; !exists {
+		s.Tags["Name"] = "Packer Builder"
+	}
+
+	ec2Tags, err := ConvertToEC2Tags(s.Tags, *ec2conn.Config.Region, s.SourceAMI, s.Ctx)
+	if err != nil {
+		err := fmt.Errorf("Error tagging source instance: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
 	}
 
 	_, err = ec2conn.CreateTags(&ec2.CreateTagsInput{
@@ -301,8 +294,10 @@ func (s *StepRunSourceInstance) Run(state multistep.StateBag) multistep.StepActi
 		Resources: []*string{instance.InstanceId},
 	})
 	if err != nil {
-		ui.Message(
-			fmt.Sprintf("Failed to tag a Name on the builder instance: %s", err))
+		err := fmt.Errorf("Error tagging source instance: %s", err)
+		state.Put("error", err)
+		ui.Error(err.Error())
+		return multistep.ActionHalt
 	}
 
 	if s.Debug {
@@ -364,17 +359,4 @@ func (s *StepRunSourceInstance) Cleanup(state multistep.StateBag) {
 
 		WaitForState(&stateChange)
 	}
-}
-
-func WaitUntilSecurityGroupExists(c *ec2.EC2, input *ec2.DescribeSecurityGroupsInput) error {
-	for i := 0; i < 40; i++ {
-		_, err := c.DescribeSecurityGroups(input)
-		if err != nil {
-			log.Printf("[DEBUG] Error querying security group %v: %s", input.GroupIds, err)
-			time.Sleep(15 * time.Second)
-			continue
-		}
-		return nil
-	}
-	return fmt.Errorf("timed out")
 }

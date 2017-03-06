@@ -65,6 +65,9 @@ func (s *StepSourceAMIInfo) Run(state multistep.StateBag) multistep.StepAction {
 	if len(s.AmiFilters.Filters) > 0 {
 		params.Filters = buildAmiFilters(s.AmiFilters.Filters)
 	}
+	if len(s.AmiFilters.Owners) > 0 {
+		params.Owners = s.AmiFilters.Owners
+	}
 
 	log.Printf("Using AMI Filters %v", params)
 	imageResp, err := ec2conn.DescribeImages(params)
@@ -98,7 +101,7 @@ func (s *StepSourceAMIInfo) Run(state multistep.StateBag) multistep.StepAction {
 
 	ui.Message(fmt.Sprintf("Found Image ID: %s", *image.ImageId))
 
-	// Enhanced Networking (SriovNetSupport) can only be enabled on HVM AMIs.
+	// Enhanced Networking can only be enabled on HVM AMIs.
 	// See http://goo.gl/icuXh5
 	if s.EnhancedNetworking && *image.VirtualizationType != "hvm" {
 		err := fmt.Errorf("Cannot enable enhanced networking, source AMI '%s' is not HVM", s.SourceAmi)

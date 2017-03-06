@@ -75,7 +75,11 @@ each category, the available configuration keys are alphabetized.
 ### Optional:
 
 -   `ami_description` (string) - The description to set for the
-    resulting AMI(s). By default this description is empty.
+    resulting AMI(s). By default this description is empty. This is a
+    [configuration template](/docs/templates/configuration-templates.html)
+    where the `SourceAMI` variable is replaced with the source AMI ID and
+    `BuildRegion` variable is replaced with name of the region where this
+    is built.
 
 -   `ami_groups` (array of strings) - A list of groups that have access to
     launch the resulting AMI(s). By default no groups have permission to launch
@@ -118,11 +122,22 @@ each category, the available configuration keys are alphabetized.
     forces Packer to find an open device automatically.
 
 -   `enhanced_networking` (boolean) - Enable enhanced
-    networking (SriovNetSupport) on HVM-compatible AMIs. If true, add
+    networking (SriovNetSupport and ENA) on HVM-compatible AMIs. If true, add
     `ec2:ModifyInstanceAttribute` to your AWS IAM policy.
 
 -   `force_deregister` (boolean) - Force Packer to first deregister an existing
     AMI if one with the same name already exists. Default `false`.
+
+-   `force_delete_snapshot` (boolean) - Force Packer to delete snapshots associated with
+    AMIs, which have been deregistered by `force_deregister`. Default `false`.
+
+-   `encrypt_boot` (boolean) - Instruct packer to automatically create a copy of the
+    AMI with an encrypted boot volume (discarding the initial unencrypted AMI in the
+    process). Default `false`.
+
+-   `kms_key_id` (string) - The ID of the KMS key to use for boot volume encryption.
+    This only applies to the main `region`, other regions where the AMI will be copied
+    will be encrypted by the default EBS KMS key.
 
 -   `from_scratch` (boolean) - Build a new volume instead of starting from an
     existing AMI root volume snapshot. Default `false`. If true, `source_ami` is
@@ -130,9 +145,11 @@ each category, the available configuration keys are alphabetized.
     `ami_virtualization_type`, `pre_mount_commands` and `root_volume_size`. The
     below options are also required in this mode only:
 
--   `ami_block_device_mappings` (array of block device mappings) - Add the block
-    device mappings to the AMI. A `device_name` entry matching `root_device_name`
-    should be set. The block device mappings allow for keys:
+-   `ami_block_device_mappings` (array of block device mappings) - Add one or
+    more [block device mappings](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html)
+    to the AMI. These will be attached when booting a new instance from your
+    AMI. Your options here may vary depending on the type of VM you use. The
+    block device mappings allow for the following configuration:
 
     -   `delete_on_termination` (boolean) - Indicates whether the EBS volume is
         deleted on instance termination. Default `false`. **NOTE**: If this
@@ -141,7 +158,7 @@ each category, the available configuration keys are alphabetized.
         every build.
 
     -   `device_name` (string) - The device name exposed to the instance (for
-        example, "/dev/sdh" or "xvdh"). Required when specifying `volume_size`.
+         example, `/dev/sdh` or `xvdh`). Required when specifying `volume_size`.
 
     -   `encrypted` (boolean) - Indicates whether to encrypt the volume or not
 
@@ -204,6 +221,21 @@ each category, the available configuration keys are alphabetized.
 -   `skip_region_validation` (boolean) - Set to true if you want to skip
     validation of the `ami_regions` configuration option. Default `false`.
 
+-   `snapshot_tags` (object of key/value strings) - Tags to apply to snapshot.
+    They will override AMI tags if already applied to snapshot. This is a
+    [configuration template](/docs/templates/configuration-templates.html)
+    where the `SourceAMI` variable is replaced with the source AMI ID and
+    `BuildRegion` variable is replaced with name of the region where this
+    is built.
+
+-   `snapshot_groups` (array of strings) - A list of groups that have access to
+    create volumes from the snapshot(s). By default no groups have permission to create
+    volumes form the snapshot(s). `all` will make the snapshot publicly accessible.
+
+-   `snapshot_users` (array of strings) - A list of account IDs that have access to
+    create volumes from the snapshot(s). By default no additional users other than the
+    user creating the AMI has permissions to create volumes from the backing snapshot(s).
+
 -   `source_ami_filter` (object) - Filters used to populate the `source_ami` field.
     Example:
 
@@ -234,10 +266,12 @@ each category, the available configuration keys are alphabetized.
     -   `most_recent` (bool) - Selects the newest created image when true.
          This is most useful for selecting a daily distro build.
 
--   `snapshot_tags` (object of key/value strings) - Tags to apply to snapshot.
-     They will override AMI tags if already applied to snapshot.
+-   `tags` (object of key/value strings) - Tags applied to the AMI. This is a
+    [configuration template](/docs/templates/configuration-templates.html)
+    where the `SourceAMI` variable is replaced with the source AMI ID and
+    `BuildRegion` variable is replaced with name of the region where this
+    is built.
 
--   `tags` (object of key/value strings) - Tags applied to the AMI.
 
 ## Basic Example
 

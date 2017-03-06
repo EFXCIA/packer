@@ -21,7 +21,7 @@ Dockerfiles, Packer is able to provision containers with portable scripts or
 configuration management systems that are not tied to Docker in any way. It also
 has a simpler mental model: you provision containers much the same way you
 provision a normal virtualized or dedicated server. For more information, read
-the section on [Dockerfiles](#toc_8).
+the section on [Dockerfiles](#dockerfiles).
 
 The Docker builder must run on a machine that has Docker installed. Therefore
 the builder only works on machines that support Docker (modern Linux machines).
@@ -55,6 +55,58 @@ more easily tagged, pushed, etc.
   "commit": true
 }
 ```
+
+## Basic Example: Changes to Metadata
+
+Below is an example using the changes argument of the builder. This feature allows the source images metadata to be changed when committed back into the Docker environment. It is derived from the `docker commit --change` command line [option to Docker](https://docs.docker.com/engine/reference/commandline/commit/).
+
+Example uses of all of the options, assuming one is building an NGINX image from ubuntu as an simple example:
+
+```
+{
+	"type": "docker",
+	"image": "ubuntu",
+	"commit": true,
+	"changes": [
+		"USER www-data",
+		"WORKDIR /var/www",
+		"ENV HOSTNAME www.example.com",
+		"VOLUME /test1 /test2",
+		"EXPOSE 80 443",
+		"CMD [\"nginx\", \"-g\", \"daemon off;\"]",
+		"MAINTAINER Captain Kirk",
+		"ENTRYPOINT /var/www/start.sh"
+	]
+}
+```
+
+Allowed metadata fields that can be changed are:
+
+- CMD
+	- String, supports both array (escaped) and string form
+	- EX: `”CMD [\"nginx\", \"-g\", \"daemon off;\"]"`
+	- EX: `"CMD nginx -g daemon off;”`
+- ENTRYPOINT
+	- String 
+	- EX: `“ENTRYPOINT /var/www/start.sh”`
+- ENV
+	- String, note there is no equal sign: 
+	- EX: `“ENV HOSTNAME www.example.com”` not `“ENV HOSTNAME=www.example.com”`
+- EXPOSE
+	- String, space separated ports 
+	- EX: `“EXPOSE 80 443”`
+- MAINTAINER
+	- String 
+	- EX: `“MAINTAINER NAME”`
+- USER
+	- String 
+	- EX: `“USER USERNAME”`
+- VOLUME
+	- String 
+	- EX: `“VOLUME FROM TO“`
+- WORKDIR
+	- String
+	- EX: `“WORKDIR PATH”`
 
 ## Configuration Reference
 
@@ -108,7 +160,8 @@ You must specify (only) one of `commit`, `discard`, or `export_path`.
     [Amazon EC2 Container Registry (ECR)](https://aws.amazon.com/ecr/).
     The builder only logs in for the duration of the pull. If true
     `login_server` is required and `login`, `login_username`, and
-    `login_password` will be ignored.
+    `login_password` will be ignored. For more information see the
+    [section on ECR](#amazon-ec2-container-registry).
 
 -   `login` (boolean) - Defaults to false. If true, the builder will login in
     order to pull the image. The builder only logs in for the duration of
@@ -301,3 +354,11 @@ the future:
     and other metadata. Packer builds a raw Docker container image that has none
     of this metadata. You can pass in much of this metadata at runtime with
     `docker run`.
+
+## Overriding the host directory
+
+By default, Packer creates a temporary folder under your home directory, and
+uses that to stage files for uploading into the container. If you would like to
+change the path to this temporary folder, you can set the `PACKER_TMP_DIR`
+environment variable. This can be useful, for example, if you have your home
+directory permissions set up to disallow access from the docker daemon.

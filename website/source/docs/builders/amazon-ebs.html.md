@@ -28,6 +28,10 @@ bit.
 The builder does *not* manage AMIs. Once it creates an AMI and stores it in your
 account, it is up to you to use, delete, etc. the AMI.
 
+-> **Note:** Temporary resources are, by default, all created with the prefix
+`packer`. This can be useful if you want to restrict the security groups and
+key pairs Packer is able to operate on.
+
 ## Configuration Reference
 
 There are many configuration options available for the builder. They are
@@ -49,9 +53,9 @@ builder.
     templates](/docs/templates/configuration-templates.html) for more info)
 
 -   `instance_type` (string) - The EC2 instance type to use while building the
-    AMI, such as "m1.small".
+    AMI, such as `m1.small`.
 
--   `region` (string) - The name of the region, such as "us-east-1", in which to
+-   `region` (string) - The name of the region, such as `us-east-1`, in which to
     launch the EC2 instance to create the AMI.
 
 -   `secret_key` (string) - The secret key used to communicate with AWS. [Learn
@@ -63,8 +67,13 @@ builder.
 
 ### Optional:
 
--   `ami_block_device_mappings` (array of block device mappings) - Add the block
-    device mappings to the AMI. The block device mappings allow for keys:
+-   `ami_block_device_mappings` (array of block device mappings) - Add one or
+    more [block device mappings](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/block-device-mapping-concepts.html)
+    to the AMI. These will be attached when booting a new instance from your
+    AMI. To add a block device during the Packer build see
+    `launch_block_device_mappings` below. Your options here may vary depending
+    on the type of VM you use. The block device mappings allow for the following
+    configuration:
 
     -   `delete_on_termination` (boolean) - Indicates whether the EBS volume is
         deleted on instance termination. Default `false`. **NOTE**: If this
@@ -73,7 +82,7 @@ builder.
         every build.
 
     -   `device_name` (string) - The device name exposed to the instance (for
-         example, "/dev/sdh" or "xvdh"). Required when specifying `volume_size`.
+         example, `/dev/sdh` or `xvdh`). Required when specifying `volume_size`.
 
     -   `encrypted` (boolean) - Indicates whether to encrypt the volume or not
 
@@ -95,17 +104,20 @@ builder.
     -   `volume_size` (integer) - The size of the volume, in GiB. Required if not
         specifying a `snapshot_id`
 
-    -   `volume_type` (string) - The volume type. gp2 for General Purpose (SSD)
-        volumes, io1 for Provisioned IOPS (SSD) volumes, and standard for Magnetic
+    -   `volume_type` (string) - The volume type. `gp2` for General Purpose (SSD)
+        volumes, `io1` for Provisioned IOPS (SSD) volumes, and `standard` for Magnetic
         volumes
 
 -   `ami_description` (string) - The description to set for the
-    resulting AMI(s). By default this description is empty.
+    resulting AMI(s). By default this description is empty. This is a
+    [configuration template](/docs/templates/configuration-templates.html)
+    where the `SourceAMI` variable is replaced with the source AMI ID and
+    `BuildRegion` variable is replaced with the value of `region`.
 
 -   `ami_groups` (array of strings) - A list of groups that have access to
     launch the resulting AMI(s). By default no groups have permission to launch
     the AMI. `all` will make the AMI publicly accessible. AWS currently doesn't
-    accept any value other than "all".
+    accept any value other than `all`.
 
 -   `ami_product_codes` (array of strings) - A list of product codes to
     associate with the AMI. By default no product codes are associated with
@@ -121,7 +133,7 @@ builder.
 
 -   `ami_virtualization_type` (string) - The type of virtualization for the AMI
     you are building. This option must match the supported virtualization
-    type of `source_ami`. Can be "paravirtual" or "hvm".
+    type of `source_ami`. Can be `paravirtual` or `hvm`.
 
 -   `associate_public_ip_address` (boolean) - If using a non-default VPC, public
     IP addresses are not provided by default. If this is toggled, your new
@@ -149,31 +161,45 @@ builder.
     Default `false`.
 
 -   `enhanced_networking` (boolean) - Enable enhanced
-    networking (SriovNetSupport) on HVM-compatible AMIs. If true, add
+    networking (SriovNetSupport and ENA) on HVM-compatible AMIs. If true, add
     `ec2:ModifyInstanceAttribute` to your AWS IAM policy.
 
 -   `force_deregister` (boolean) - Force Packer to first deregister an existing
     AMI if one with the same name already exists. Default `false`.
 
+-   `force_delete_snapshot` (boolean) - Force Packer to delete snapshots associated with
+    AMIs, which have been deregistered by `force_deregister`. Default `false`.
+
 -   `encrypt_boot` (boolean) - Instruct packer to automatically create a copy of the
     AMI with an encrypted boot volume (discarding the initial unencrypted AMI in the
     process). Default `false`.
+
+-   `kms_key_id` (string) - The ID of the KMS key to use for boot volume encryption.
+    This only applies to the main `region`, other regions where the AMI will be copied
+    will be encrypted by the default EBS KMS key.
 
 -   `iam_instance_profile` (string) - The name of an [IAM instance
     profile](https://docs.aws.amazon.com/IAM/latest/UserGuide/instance-profiles.html)
     to launch the EC2 instance with.
 
--   `launch_block_device_mappings` (array of block device mappings) - Add the
-    block device mappings to the launch instance. The block device mappings are
-    the same as `ami_block_device_mappings` above.
+-   `launch_block_device_mappings` (array of block device mappings) - Add one or
+    more block devices before the Packer build starts. These are not necessarily
+    preserved when booting from the AMI built with Packer. See
+    `ami_block_device_mappings`, above, for details.
 
 -   `run_tags` (object of key/value strings) - Tags to apply to the instance
     that is *launched* to create the AMI. These tags are *not* applied to the
-    resulting AMI unless they're duplicated in `tags`.
+    resulting AMI unless they're duplicated in `tags`. This is a
+    [configuration template](/docs/templates/configuration-templates.html)
+    where the `SourceAMI` variable is replaced with the source AMI ID and
+    `BuildRegion` variable is replaced with the value of `region`.
 
 -   `run_volume_tags` (object of key/value strings) - Tags to apply to the volumes
     that are *launched* to create the AMI. These tags are *not* applied to the
-    resulting AMI unless they're duplicated in `tags`.
+    resulting AMI unless they're duplicated in `tags`. This is a
+    [configuration template](/docs/templates/configuration-templates.html)
+    where the `SourceAMI` variable is replaced with the source AMI ID and
+    `BuildRegion` variable is replaced with the value of `region`.
 
 -   `security_group_id` (string) - The ID (*not* the name) of the security group
     to assign to the instance. By default this is not set and Packer will
@@ -185,8 +211,26 @@ builder.
     described above. Note that if this is specified, you must omit the
     `security_group_id`.
 
+-   `shutdown_behavior` (string) - Automatically terminate instances on shutdown
+    in case Packer exits ungracefully. Possible values are "stop" and "terminate",
+    default is `stop`.
+
 -   `skip_region_validation` (boolean) - Set to true if you want to skip
     validation of the region configuration option.  Default `false`.
+
+-   `snapshot_groups` (array of strings) - A list of groups that have access to
+    create volumes from the snapshot(s). By default no groups have permission to create
+    volumes form the snapshot(s). `all` will make the snapshot publicly accessible.
+
+-   `snapshot_users` (array of strings) - A list of account IDs that have access to
+    create volumes from the snapshot(s). By default no additional users other than the
+    user creating the AMI has permissions to create volumes from the backing snapshot(s).
+
+-   `snapshot_tags` (object of key/value strings) - Tags to apply to snapshot.
+     They will override AMI tags if already applied to snapshot. This is a
+    [configuration template](/docs/templates/configuration-templates.html)
+    where the `SourceAMI` variable is replaced with the source AMI ID and
+    `BuildRegion` variable is replaced with the value of `region`.
 
 -   `source_ami_filter` (object) - Filters used to populate the `source_ami` field.
     Example:
@@ -218,19 +262,16 @@ builder.
     -   `most_recent` (bool) - Selects the newest created image when true.
          This is most useful for selecting a daily distro build.
 
--   `snapshot_tags` (object of key/value strings) - Tags to apply to snapshot.
-     They will override AMI tags if already applied to snapshot.
-
 -   `spot_price` (string) - The maximum hourly price to pay for a spot instance
     to create the AMI. Spot instances are a type of instance that EC2 starts
     when the current spot price is less than the maximum price you specify. Spot
     price will be updated based on available spot instance capacity and current
     spot instance requests. It may save you some costs. You can set this to
-    "auto" for Packer to automatically discover the best spot price or to "0"
+    `auto` for Packer to automatically discover the best spot price or to "0"
     to use an on demand instance (default).
 
 -   `spot_price_auto_product` (string) - Required if `spot_price` is set
-    to "auto". This tells Packer what sort of AMI you're launching to find the
+    to `auto`. This tells Packer what sort of AMI you're launching to find the
     best spot price. This must be one of: `Linux/UNIX`, `SUSE Linux`, `Windows`,
     `Linux/UNIX (Amazon VPC)`, `SUSE Linux (Amazon VPC)`, `Windows (Amazon VPC)`
 
@@ -251,17 +292,21 @@ builder.
     of the key pair.
 
 -   `ssh_private_ip` (boolean) - If true, then SSH will always use the private
-    IP if available.
+    IP if available. Also works for WinRM.
 
 -   `subnet_id` (string) - If using VPC, the ID of the subnet, such as
-    "subnet-12345def", where Packer will launch the EC2 instance. This field is
+    `subnet-12345def`, where Packer will launch the EC2 instance. This field is
     required if you are using an non-default VPC.
 
 -   `tags` (object of key/value strings) - Tags applied to the AMI and
-    relevant snapshots.
+    relevant snapshots. This is a
+    [configuration template](/docs/templates/configuration-templates.html)
+    where the `SourceAMI` variable is replaced with the source AMI ID and
+    `BuildRegion` variable is replaced with the value of `region`.
 
--   `temporary_key_pair_name` (string) - The name of the temporary keypair
-    to generate. By default, Packer generates a name with a UUID.
+-   `temporary_key_pair_name` (string) - The name of the temporary key pair
+    to generate. By default, Packer generates a name that looks like
+    `packer_<UUID>`, where \<UUID\> is a 36 character unique identifier.
 
 -   `token` (string) - The access token to use. This is different from the
     access key and secret key. If you're not sure what this is, then you
@@ -280,15 +325,12 @@ builder.
     to be set.
 
 -   `windows_password_timeout` (string) - The timeout for waiting for a Windows
-    password for Windows instances. Defaults to 20 minutes. Example value: "10m"
-
--   `shutdown_behaviour` (string) - Automatically terminate instances on shutdown
-    incase packer exits ungracefully. Possible values are "stop" and "terminate",
-    default is stop.
+    password for Windows instances. Defaults to 20 minutes. Example value: `10m`
 
 ## Basic Example
 
-Here is a basic example. You will need to provide access keys, and may need to change the AMI IDs according to what images exist at the time the template is run:
+Here is a basic example. You will need to provide access keys, and may need to
+change the AMI IDs according to what images exist at the time the template is run:
 
 ``` {.javascript}
 {
@@ -307,7 +349,10 @@ Here is a basic example. You will need to provide access keys, and may need to c
 environmental variables. See the configuration reference in the section above
 for more information on what environmental variables Packer will look for.
 
-Further information on locating AMI IDs and their relationship to instance types and regions can be found in the AWS EC2 Documentation [for Linux](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/finding-an-ami.html) or [for Windows](http://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/finding-an-ami.html).
+Further information on locating AMI IDs and their relationship to instance types
+and regions can be found in the AWS EC2 Documentation
+[for Linux](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/finding-an-ami.html)
+or [for Windows](http://docs.aws.amazon.com/AWSEC2/latest/WindowsGuide/finding-an-ami.html).
 
 ## Accessing the Instance to Debug
 
@@ -318,8 +363,11 @@ You can use this information to access the instance as it is running.
 
 ## AMI Block Device Mappings Example
 
-Here is an example using the optional AMI block device mappings. This will add
-the /dev/sdb and /dev/sdc block device mappings to the finished AMI. As with the basic example, you will need to provide access keys and may need to change the source AMI ID based on what images exist when this template is run:
+Here is an example using the optional AMI block device mappings. Our
+configuration of `launch_block_device_mappings` will expand the root volume
+(`/dev/sda`) to 40gb during the build (up from the default of 8gb). With
+`ami_block_device_mappings` AWS will attach additional volumes `/dev/sdb` and
+`/dev/sdc` when we boot a new instance of our AMI.
 
 ``` {.javascript}
 {
@@ -331,6 +379,12 @@ the /dev/sdb and /dev/sdc block device mappings to the finished AMI. As with the
   "instance_type": "t2.micro",
   "ssh_username": "ubuntu",
   "ami_name": "packer-quick-start {{timestamp}}",
+  "launch_block_device_mappings": [{
+    "device_name": "/dev/sda1",
+    "volume_size": 40,
+    "volume_type": "gp2",
+    "delete_on_termination": true
+  }],
   "ami_block_device_mappings": [
     {
       "device_name": "/dev/sdb",
@@ -347,7 +401,9 @@ the /dev/sdb and /dev/sdc block device mappings to the finished AMI. As with the
 ## Tag Example
 
 Here is an example using the optional AMI tags. This will add the tags
-"OS\_Version" and "Release" to the finished AMI. As before, you will need to provide your access keys, and may need to change the source AMI ID based on what images exist when this template is run:
+`OS_Version` and `Release` to the finished AMI. As before, you will need to
+provide your access keys, and may need to change the source AMI ID based on what
+images exist when this template is run:
 
 ``` {.javascript}
 {
@@ -373,4 +429,3 @@ up all residual volumes that are not designated by the user to remain after
 termination. If you need to preserve those source volumes, you can overwrite the
 termination setting by specifying `delete_on_termination=false` in the
 `launch_block_device_mappings` block for the device.
-

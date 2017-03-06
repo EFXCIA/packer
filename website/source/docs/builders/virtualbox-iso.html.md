@@ -230,6 +230,9 @@ builder.
     to, defaults to "ide". When set to "sata", the drive is attached to an AHCI
     SATA controller.
 
+-   `iso_target_extension` (string) - The extension of the iso file after
+    download. This defaults to "iso".
+
 -   `iso_target_path` (string) - The path where the iso should be saved
     after download. By default will go in the packer cache, with a hash of the
     original filename as its name.
@@ -267,6 +270,10 @@ builder.
     `shutdown_command` for the virtual machine to actually shut down. If it
     doesn't shut down in this time, it is an error. By default, the timeout is
     `5m`, or five minutes.
+
+-   `skip_export` (boolean) - Defaults to `false`. When enabled, Packer will
+    not export the VM. Useful if the build output is not the resultant image,
+    but created inside the VM.
 
 -   `ssh_host_port_min` and `ssh_host_port_max` (integer) - The minimum and
     maximum port to use for the SSH port on the host machine which is forwarded

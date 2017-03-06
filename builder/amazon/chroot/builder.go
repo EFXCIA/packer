@@ -64,6 +64,9 @@ func (b *Builder) Prepare(raws ...interface{}) ([]string, error) {
 		InterpolateContext: &b.config.ctx,
 		InterpolateFilter: &interpolate.RenderFilter{
 			Exclude: []string{
+				"ami_description",
+				"snapshot_tags",
+				"tags",
 				"command_wrapper",
 				"post_mount_commands",
 				"pre_mount_commands",
@@ -244,11 +247,17 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 		&StepEarlyCleanup{},
 		&StepSnapshot{},
 		&awscommon.StepDeregisterAMI{
-			ForceDeregister: b.config.AMIForceDeregister,
-			AMIName:         b.config.AMIName,
+			ForceDeregister:     b.config.AMIForceDeregister,
+			ForceDeleteSnapshot: b.config.AMIForceDeleteSnapshot,
+			AMIName:             b.config.AMIName,
 		},
 		&StepRegisterAMI{
 			RootVolumeSize: b.config.RootVolumeSize,
+		},
+		&awscommon.StepCreateEncryptedAMICopy{
+			KeyID:             b.config.AMIKmsKeyId,
+			EncryptBootVolume: b.config.AMIEncryptBootVolume,
+			Name:              b.config.AMIName,
 		},
 		&awscommon.StepAMIRegionCopy{
 			AccessConfig: &b.config.AccessConfig,
@@ -256,14 +265,18 @@ func (b *Builder) Run(ui packer.Ui, hook packer.Hook, cache packer.Cache) (packe
 			Name:         b.config.AMIName,
 		},
 		&awscommon.StepModifyAMIAttributes{
-			Description:  b.config.AMIDescription,
-			Users:        b.config.AMIUsers,
-			Groups:       b.config.AMIGroups,
-			ProductCodes: b.config.AMIProductCodes,
+			Description:    b.config.AMIDescription,
+			Users:          b.config.AMIUsers,
+			Groups:         b.config.AMIGroups,
+			ProductCodes:   b.config.AMIProductCodes,
+			SnapshotUsers:  b.config.SnapshotUsers,
+			SnapshotGroups: b.config.SnapshotGroups,
+			Ctx:            b.config.ctx,
 		},
 		&awscommon.StepCreateTags{
 			Tags:         b.config.AMITags,
 			SnapshotTags: b.config.SnapshotTags,
+			Ctx:          b.config.ctx,
 		},
 	)
 
